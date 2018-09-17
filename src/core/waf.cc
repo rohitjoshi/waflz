@@ -1437,6 +1437,16 @@ int32_t waf::process_rule(waflz_pb::event **ao_event,
                         ++l_cr_idx;
                         continue;
                 }
+                if(!a_ctx.m_ctl_rule_id_set.empty())
+                {
+                        if(a_ctx.m_ctl_rule_id_set.find(l_rule->action().id()) != a_ctx.m_ctl_rule_id_set.end())
+                        {
+                                // Rule id found in ctl map
+                                // which will skipped for this ctx
+                                return WAFLZ_STATUS_OK;;
+                        }
+                }
+
                 int32_t l_s;
                 i_match = false;
                 l_s = process_rule_part(ao_event,
@@ -1830,6 +1840,43 @@ int32_t waf::process_action_nd(const waflz_pb::sec_action_t &a_action,
         {
                 a_ctx.m_skip = a_action.skip();
                 a_ctx.m_skip_after = a_action.skipafter().c_str();
+        }
+        // -------------------------------------------------
+        // check for ctl
+        // -------------------------------------------------
+        for(int32_t i_ctl = 0; i_ctl < a_action.rule_remove_by_id_size(); ++i_ctl)
+        {
+                a_ctx.m_ctl_rule_id_set.insert(a_action.rule_remove_by_id(i_ctl));
+        }
+        for(int32_t i_ctl = 0; i_ctl < a_action.rule_remove_target_by_id_size(); ++i_ctl)
+        {
+                const waflz_pb::update_target_t *l_update_target = &(a_action.rule_remove_target_by_id(i_ctl));
+                set_map_t::iterator i_t = a_ctx.m_ctl_id_target_map.find(l_update_target->id());
+                if(i_t != a_ctx.m_ctl_id_target_map.end())
+                {
+                        i_t->second.push_back(l_update_target);
+                }
+                else
+                {
+                        rtu_list_t l_rtu_list;
+                        l_rtu_list.push_back(l_update_target);
+                        a_ctx.m_ctl_id_target_map[l_update_target->id()] = l_rtu_list;
+                }
+        }
+        for(int32_t i_ctl = 0; i_ctl < a_action.rule_remove_target_by_tag_size(); ++i_ctl)
+        {
+                const waflz_pb::update_target_t *l_update_target = &(a_action.rule_remove_target_by_tag(i_ctl));
+                set_map_t::iterator i_t = a_ctx.m_ctl_tag_target_map.find(l_update_target->id());
+                if(i_t != a_ctx.m_ctl_tag_target_map.end())
+                {
+                        i_t->second.push_back(l_update_target);
+                }
+                else
+                {
+                        rtu_list_t l_rtu_list;
+                        l_rtu_list.push_back(l_update_target);
+                        a_ctx.m_ctl_tag_target_map[l_update_target->id()] = l_rtu_list;
+                }
         }
         // -------------------------------------------------
         // for each var
@@ -2374,6 +2421,24 @@ int32_t waf::process_phase(waflz_pb::event **ao_event,
                         a_ctx.m_skip_after = NULL;
                 }
         }
+#if 0
+        NDBG_PRINT("m_ctl_id_target_map\n");
+        for(set_map_t::const_iterator i_t = a_ctx.m_ctl_id_target_map.begin();
+            i_t != a_ctx.m_ctl_id_target_map.end();
+            ++i_t)
+        {
+                const waflz_pb::update_target_t* l_t = i_t->second.front();//m_ctl_id_target_map
+                NDBG_PRINT("id: %s and rtu %s: \n", i_t->first.c_str(), l_t->DebugString().c_str());
+        }
+        NDBG_PRINT("m_ctl_tag_target_map\n");
+        for(set_map_t::const_iterator i_t = a_ctx.m_ctl_tag_target_map.begin();
+            i_t != a_ctx.m_ctl_tag_target_map.end();
+            ++i_t)
+        {
+                const waflz_pb::update_target_t* l_t = i_t->second.front();//m_ctl_id_target_map
+                NDBG_PRINT("id: %s and rtu %s: \n", i_t->first.c_str(), l_t->DebugString().c_str());
+        }
+#endif
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------

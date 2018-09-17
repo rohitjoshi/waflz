@@ -366,12 +366,13 @@ int32_t config_parser::add_action(waflz_pb::sec_action_t &ao_action,
                                 }
                                 else if(STRCASECMP(l_ctl_k, "ruleremovebyid"))
                                 {
-                                        ao_action.mutable_rule_remove_by_id()->assign(i_ctl->substr(l_pos+1));
+                                        std::string* l_ptr = ao_action.add_rule_remove_by_id();
+                                        l_ptr->assign(i_ctl->substr(l_pos+1));
                                 }
                                 // -------------------------
                                 // TODO -fix!!!
                                 // -------------------------
-#if 0
+
                                 // ctl:ruleRemoveTargetById=123;ARGS:/^id_/
                                 else if(STRCASECMP(l_ctl_k, "ruleremovetargetbyid"))
                                 {
@@ -380,126 +381,38 @@ int32_t config_parser::add_action(waflz_pb::sec_action_t &ao_action,
                                         size_t l_pos_id;
                                         // get id 123
                                         l_pos_id = l_target.find(";");
-                                        waflz_pb::sec_action_t_rule_update_t *l_rm_target_by_id = ao_action.mutable_rule_remove_target_by_id();
+                                        // We only add one rule per ctl
+                                        waflz_pb::update_target_t *l_update_target_by_id = ao_action.add_rule_remove_target_by_id();
                                         // set the id of the rule
-                                        l_rm_target_by_id->set_id(l_target.substr(0, l_pos_id));
+                                        l_update_target_by_id->set_id(l_target.substr(0, l_pos_id));
+                                        // add variable
+                                        ::waflz_pb::variable_t* l_var = l_update_target_by_id->add_variable();
+                                        variable_list_t l_variable_list;
                                         // get target value 'ARGS:/^id_/'
                                         std::string l_target_val = l_target.substr(l_pos_id+1);
-                                        if(l_target_val.at(0) == '!')
-                                        {
-                                                l_rm_target_by_id->set_is_negated(true);
-                                        }
-                                        else
-                                        {
-                                                l_rm_target_by_id->set_is_negated(false);
-                                        }
-                                        size_t l_pos_target;
-                                        l_pos_target = l_target_val.find(":");
-                                        // We have a target match ':/^id_/'
-                                        if(l_pos_target != std::string::npos)
-                                        {
-                                                if(l_rm_target_by_id->is_negated())
-                                                {
-                                                        l_rm_target_by_id->set_target(l_target_val.substr(1, l_pos_target));
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_id->set_target(l_target_val.substr(0, l_pos_target));
-                                                }
-                                                // get target match which is '/^id_/'
-                                                std::string l_target_match = l_target_val.substr(l_pos_target + 1);
-                                                // Check is its a regex '/^id_/'
-                                                if((l_target_match[0] == '/') &&
-                                                   (l_target_match[l_target_match.length() - 1] == '/'))
-                                                {
-                                                        l_rm_target_by_id->set_target_match(l_target_match.substr(1, l_target_match.length() - 2));
-                                                        l_rm_target_by_id->set_is_regex(true);
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_id->set_target_match(l_target_match);
-                                                        l_rm_target_by_id->set_is_regex(false);
-                                                }
-                                        }
-                                        else
-                                        {
-                                                if(l_rm_target_by_id->is_negated())
-                                                {
-                                                        l_rm_target_by_id->set_target(l_target_val.substr(1, l_pos_target));
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_id->set_target(l_target_val.substr(0, l_pos_target));
-                                                }
-                                        }
+                                        parse_vars(l_variable_list, l_target_val, '|');
+                                        l_var->CopyFrom(*(l_variable_list.front()));
                                 }
-#endif
-                                // -------------------------
-                                // TODO -fix!!!
-                                // -------------------------
-#if 0
-                                // ctl:ctl:ruleRemoveTargetByTag=OWASP_CRS/(WEB_ATTACK/;ARGS:login[password]
+                                // ctl:ruleRemoveTargetByTag=OWASP_CRS/(WEB_ATTACK/;ARGS:login[password]
                                 else if(STRCASECMP(l_ctl_k, "ruleremovetargetbytag"))
                                 {
-                                        // get everything after = 'OWASP_CRS/(WEB_ATTACK/;ARGS:login[password]'
+                                        // get everything after = '123;ARGS:/^id_/'
                                         std::string l_target = i_ctl->substr(l_pos+1);
                                         size_t l_pos_id;
                                         // get id 123
                                         l_pos_id = l_target.find(";");
-                                        waflz_pb::sec_action_t_rule_update_t *l_rm_target_by_tag = ao_action.mutable_ruleremovetargetbytag();
+                                        // We only add one rule per ctl
+                                        waflz_pb::update_target_t *l_update_target_by_id = ao_action.add_rule_remove_target_by_tag();
                                         // set the tag of the rule
-                                        l_rm_target_by_tag->set_tag(l_target.substr(0, l_pos_id));
+                                        l_update_target_by_id->set_tag(l_target.substr(0, l_pos_id));
+                                        // add variable
+                                        ::waflz_pb::variable_t* l_var = l_update_target_by_id->add_variable();
+                                        variable_list_t l_variable_list;
                                         // get target value 'ARGS:/^id_/'
                                         std::string l_target_val = l_target.substr(l_pos_id+1);
-                                        if(l_target_val.at(0) == '!')
-                                        {
-                                                l_rm_target_by_tag->set_is_negated(true);
-                                        }
-                                        else
-                                        {
-                                                l_rm_target_by_tag->set_is_negated(false);
-                                        }
-                                        size_t l_pos_target;
-                                        l_pos_target = l_target_val.find(":");
-                                        // We have a target match ':/^id_/'
-                                        if(l_pos_target != std::string::npos)
-                                        {
-                                                if(l_rm_target_by_tag->is_negated())
-                                                {
-                                                        l_rm_target_by_tag->set_target(l_target_val.substr(1, l_pos_target));
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_tag->set_target(l_target_val.substr(0, l_pos_target));
-                                                }
-                                                // get target match which is '/^id_/'
-                                                std::string l_target_match = l_target_val.substr(l_pos_target + 1);
-                                                // Check is its a regex '/^id_/'
-                                                if((l_target_match[0] == '/') &&
-                                                   (l_target_match[l_target_match.length() - 1] == '/'))
-                                                {
-                                                        l_rm_target_by_tag->set_target_match(l_target_match.substr(1, l_target_match.length() - 2));
-                                                        l_rm_target_by_tag->set_is_regex(true);
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_tag->set_target_match(l_target_match);
-                                                        l_rm_target_by_tag->set_is_regex(false);
-                                                }
-                                        }
-                                        else
-                                        {
-                                                if(l_rm_target_by_tag->is_negated())
-                                                {
-                                                        l_rm_target_by_tag->set_target(l_target_val.substr(1, l_pos_target));
-                                                }
-                                                else
-                                                {
-                                                        l_rm_target_by_tag->set_target(l_target_val.substr(0, l_pos_target));
-                                                }
-                                        }
+                                        parse_vars(l_variable_list, l_target_val, '|');
+                                        l_var->CopyFrom(*(l_variable_list.front()));
                                 }
-#endif
                                 else
                                 {
                                         ++m_unimplemented_ctls[l_ctl_k.c_str()];
@@ -2651,94 +2564,90 @@ int32_t config_parser::get_action_string(std::string &ao_str,
                 ao_str += a_sec_action.rule_engine();
                 ao_str += ",";
         }
-        if(a_sec_action.has_rule_remove_by_id())
+        for(int32_t i_ctl = 0; i_ctl < a_sec_action.rule_remove_by_id_size(); ++i_ctl)
         {
                 ao_str += "ctl";
                 ao_str += ":";
                 ao_str += "ruleRemovebyId=";
-                ao_str += a_sec_action.rule_remove_by_id();
+                ao_str += a_sec_action.rule_remove_by_id(i_ctl);
                 ao_str += ",";
         }
         // -------------------------------------------------
-        // TODO FIX!!!
+        // ctl:ruleRemoveTargetById=942440;ARGS:form_build_id,\
+        // ctl:ruleRemoveTargetById=942450;ARGS:form_token,\
         // -------------------------------------------------
-#if 0
-        if(a_sec_action.has_rule_remove_target_by_id())
+        for(int32_t i_ctl = 0; i_ctl < a_sec_action.rule_remove_target_by_id_size(); ++i_ctl)
         {
                 ao_str += "ctl";
                 ao_str += ":";
                 ao_str += "ruleRemoveTargetById=";
-                const waflz_pb::sec_action_t_rule_update_t &l_rule_update = a_sec_action.ruleremovetargetbyid();
-                if(l_rule_update.has_id())
+                const waflz_pb::update_target_t &l_update_target = a_sec_action.rule_remove_target_by_id(i_ctl);
+                if(l_update_target.has_id())
                 {
-                        ao_str += l_rule_update.id();
+                        ao_str += l_update_target.id();
+                        ao_str += ";";
                 }
-                if(l_rule_update.has_target())
+                // Only one variable per ctl
+                if(l_update_target.variable_size() > 0)
                 {
-                        ao_str += ":";
-                        if(l_rule_update.is_negated())
+                        const waflz_pb::variable_t &l_var = l_update_target.variable(0);
+                        // Reflect Variable name
+                        const google::protobuf::EnumValueDescriptor* l_descriptor =
+                                        waflz_pb::variable_t_type_t_descriptor()->FindValueByNumber(l_var.type());
+                        ao_str += l_descriptor->name();
+                        // Only one match per variable
+                        if(l_var.match_size() > 0)
                         {
-                                ao_str += "!";
-                        }
-                        ao_str += l_rule_update.target();
-                }
-                if(l_rule_update.has_target_match())
-                {
-                        ao_str += ":";
-                        if(l_rule_update.is_regex())
-                        {
-                                ao_str += "/";
-                                ao_str += l_rule_update.target_match();
-                                ao_str += "/";
-                        }
-                        else
-                        {
-                               ao_str += l_rule_update.target_match();
+                                const waflz_pb::variable_t_match_t &l_match = l_var.match(0);
+                                // Since this action just removes target
+                                // we dont use ! char
+                                if(l_match.has_value())
+                                {
+                                      ao_str += ":";
+                                      ao_str += l_match.value();
+                                }
                         }
                 }
                 ao_str += ",";
         }
-#endif
         // -------------------------------------------------
-        // TODO FIX!!!
+        // ctl:ruleRemoveTargetByTag=CRS;ARGS:user_mail_password_reset_body,\
+        // ctl:ruleRemoveTargetByTag=CRS;ARGS:user_mail_register_admin_created_body,\
         // -------------------------------------------------
-#if 0
-        if(a_sec_action.has_rule_remove_target_by_tag())
+        for(int32_t i_ctl = 0; i_ctl < a_sec_action.rule_remove_target_by_tag_size(); ++i_ctl)
         {
                 ao_str += "ctl";
                 ao_str += ":";
                 ao_str += "ruleRemoveTargetByTag=";
-                const waflz_pb::sec_action_t_rule_update_t &l_rule_update = a_sec_action.ruleremovetargetbytag();
-                if(l_rule_update.has_tag())
+                const waflz_pb::update_target_t &l_update_target = a_sec_action.rule_remove_target_by_tag(i_ctl);
+                if(l_update_target.has_id())
                 {
-                        ao_str += l_rule_update.tag();
+                        ao_str += l_update_target.id();
+                        ao_str += ";";
                 }
-                if(l_rule_update.has_target())
+                // Only one variable per ctl
+                if(l_update_target.variable_size() > 0)
                 {
-                        ao_str += ":";
-                        if(l_rule_update.is_negated())
+                        const waflz_pb::variable_t &l_var = l_update_target.variable(0);
+                        // Reflect Variable name
+                        const google::protobuf::EnumValueDescriptor* l_descriptor =
+                                        waflz_pb::variable_t_type_t_descriptor()->FindValueByNumber(l_var.type());
+                        ao_str += l_descriptor->name();
+                        // Only one match per variable
+                        if(l_var.match_size() > 0)
                         {
-                                ao_str += "!";
-                        }
-                        ao_str += l_rule_update.target();
-                }
-                if(l_rule_update.has_target_match())
-                {
-                        ao_str += ":";
-                        if(l_rule_update.is_regex())
-                        {
-                                ao_str += "/";
-                                ao_str += l_rule_update.target_match();
-                                ao_str += "/";
-                        }
-                        else
-                        {
-                               ao_str += l_rule_update.target_match();
+                                const waflz_pb::variable_t_match_t &l_match = l_var.match(0);
+                                // Since this action just removes target
+                                // we dont use ! char
+                                if(l_match.has_value())
+                                {
+                                      ao_str += ":";
+                                      ao_str += l_match.value();
+                                }
                         }
                 }
                 ao_str += ",";
         }
-#endif
         if(a_sec_action.has_multimatch() && a_sec_action.multimatch())
         {
                 ao_str += "multiMatch";

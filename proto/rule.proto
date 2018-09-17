@@ -77,6 +77,7 @@ message update_target_t {
         optional string id = 1;
         repeated variable_t variable = 2;
         optional string replace = 3;
+        optional string tag = 4;
 }
 //: ----------------------------------------------------------------------------
 //: ModSecurity SecAction Object
@@ -179,9 +180,9 @@ message sec_action_t {
         optional string force_request_body_variable = 602;
         optional string request_body_access = 603;
         optional string rule_engine = 604;
-        optional string rule_remove_by_id = 605;
-        optional update_target_t rule_remove_target_by_id = 606;
-        optional update_target_t rule_remove_target_by_tag = 607;
+        repeated string rule_remove_by_id = 605;
+        repeated update_target_t rule_remove_target_by_id = 606;
+        repeated update_target_t rule_remove_target_by_tag = 607;
         optional string request_body_processor = 608;
         optional string skipafter = 700;
         optional string allow = 701;

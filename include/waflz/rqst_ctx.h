@@ -32,6 +32,12 @@
 #include <list>
 #include <map>
 #include <strings.h>
+//: ----------------------------------------------------------------------------
+//: fwd decl's -proto
+//: ----------------------------------------------------------------------------
+namespace waflz_pb {
+class update_target_t;
+};
 namespace ns_waflz {
 //: ----------------------------------------------------------------------------
 //: fwd decl's
@@ -51,6 +57,14 @@ typedef std::map<std::string, std::string, cx_case_i_comp> cx_map_t;
 typedef std::map <std::string, uint32_t> count_map_t;
 typedef std::map <data_t, data_t, data_case_i_comp> data_map_t;
 typedef std::list<data_t> data_list_t;
+// ---------------------------------------------------------
+// *********************************************************
+// for ctl
+// *********************************************************
+// ---------------------------------------------------------
+typedef std::set<std::string> str_nc_set_t;
+typedef std::list<const ::waflz_pb::update_target_t *> rtu_list_t;
+typedef std::map<std::string, rtu_list_t> set_map_t;
 // ---------------------------------------------------------
 // *********************************************************
 // xml optimization
@@ -146,6 +160,12 @@ public:
         std::string m_cx_matched_var_name;
         data_map_t m_cx_rule_map;
         cx_map_t m_cx_tx_map;
+        // -------------------------------------------------
+        // ctl sets
+        // -------------------------------------------------
+        str_nc_set_t m_ctl_rule_id_set;
+        set_map_t m_ctl_tag_target_map;
+        set_map_t m_ctl_id_target_map;
         // -------------------------------------------------
         // state
         // -------------------------------------------------
