@@ -1344,7 +1344,7 @@ done:
         m_is_initd = true;
         return WAFLZ_STATUS_OK;
 }
-#if 0
+
 //: ----------------------------------------------------------------------------
 //: \details: TODO
 //: \return:  TODO
@@ -1361,10 +1361,16 @@ int32_t waf::init_line(config_parser::format_t a_format, const std::string &a_li
         // -------------------------------------------------
         // parse
         // -------------------------------------------------
-        l_s = m_parser.parse_line(a_format, m_pb, a_line);
+        config_parser *l_parser = new config_parser();
+        m_pb = new waflz_pb::sec_config_t();
+        l_s = l_parser->parse_line(*m_pb, a_format, a_line);
+        delete l_parser;
+        l_parser = NULL;
         if(l_s != WAFLZ_STATUS_OK)
         {
                 NDBG_PRINT("error\n");
+                delete l_parser;
+                l_parser = NULL;
                 return WAFLZ_STATUS_ERROR;
         }
         // -------------------------------------------------
@@ -1383,7 +1389,6 @@ int32_t waf::init_line(config_parser::format_t a_format, const std::string &a_li
         m_is_initd = true;
         return WAFLZ_STATUS_OK;
 }
-#endif
 //: ----------------------------------------------------------------------------
 //: \details: TODO
 //: \return:  TODO

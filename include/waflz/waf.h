@@ -105,6 +105,7 @@ public:
         void set_owasp_ruleset_version(uint32_t a_version) { m_owasp_ruleset_version = a_version; }
         void set_parse_json( const bool &a_parse_json) { m_parse_json = a_parse_json; }
         uint32_t get_owasp_ruleset_version(void) { return m_owasp_ruleset_version; }
+        int32_t init_line(config_parser::format_t a_format, const std::string &a_line);
         // -------------------------------------------------
         // public static methods
         // -------------------------------------------------
