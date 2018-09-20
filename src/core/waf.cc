@@ -1454,6 +1454,11 @@ int32_t waf::process_rule(waflz_pb::event **ao_event,
 
                 int32_t l_s;
                 i_match = false;
+                // TODO:
+                // Add checks for ctl maps before we process the rule part
+                // We need to update the variable with a negated match of the ruleid
+                // found in those maps. Might have to change const rule to non const
+                // during this check.
                 l_s = process_rule_part(ao_event,
                                         i_match,
                                         *l_rule,
