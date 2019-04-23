@@ -27,9 +27,14 @@
 //: ----------------------------------------------------------------------------
 #include "waflz/def.h"
 #include "cityhash/city.h"
+#include <pthread.h>
 #include <string>
 #include <vector>
-#include <tr1/unordered_map>
+#if defined(__APPLE__) || defined(__darwin__)
+    #include <unordered_map>
+#else
+    #include <tr1/unordered_map>
+#endif
 namespace waflz_pb {
         class event;
 }
@@ -43,6 +48,7 @@ class event;
 class profile;
 class geoip2_mmdb;
 class engine;
+class rqst_ctx;
 //: ----------------------------------------------------------------------------
 //: instances
 //: ----------------------------------------------------------------------------
@@ -63,7 +69,11 @@ public:
                         return CityHash64(a_key.c_str(), a_key.length());
                 }
         };
-        typedef std::tr1::unordered_map<std::string, instance*, str_hash> id_instance_map_t;
+        #if defined(__APPLE__) || defined(__darwin__)
+            typedef std::unordered_map<std::string, instance*, str_hash> id_instance_map_t;
+        #else
+            typedef std::tr1::unordered_map<std::string, instance*, str_hash> id_instance_map_t;
+        #endif
         // -------------------------------------------------
         // Public methods
         // -------------------------------------------------
@@ -85,13 +95,17 @@ public:
                                 uint32_t a_dir_path_len,
                                 bool a_leave_compiled_file = false,
                                 bool a_update = false);
-
-        int32_t process_audit(waflz_pb::event **ao_event,
-                              void *a_ctx,
-                              const std::string &a_id);
-        int32_t process_prod(waflz_pb::event **ao_event,
+        int32_t process(waflz_pb::event **ao_audit_event,
+                        waflz_pb::event **ao_prod_event,
+                        void *a_ctx,
+                        const std::string &a_id,
+                        rqst_ctx **ao_rqst_ctx);
+        int32_t process_part(waflz_pb::event **ao_audit_event,
+                             waflz_pb::event **ao_prod_event,
                              void *a_ctx,
-                             const std::string &a_id);
+                             const std::string &a_id,
+                             part_mk_t a_part_mk,
+                             rqst_ctx **ao_rqst_ctx);
         void set_locking(bool a_enable_locking) { m_enable_locking = a_enable_locking; }
         const char *get_err_msg(void) { return m_err_msg; }
         instance *get_instance(const std::string &a_id);

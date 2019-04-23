@@ -456,10 +456,10 @@ static void add_vars_const(const_arg_list_t &ao_list,
 //:                          G E T   V A R S
 //: ****************************************************************************
 //: ----------------------------------------------------------------------------
-#define _ADD_VAR(_str, _from) do { \
+#define _ADD_VAR(_from) do { \
         const_arg_t l_data; \
-        l_data.m_key = _str; \
-        l_data.m_key_len = sizeof(_str) - 1; \
+        l_data.m_key = NULL; \
+        l_data.m_key_len = 0; \
         l_data.m_val = _from.m_data; \
         l_data.m_val_len = _from.m_len; \
         ao_list.push_back(l_data); \
@@ -479,7 +479,7 @@ GET_VAR(REMOTE_ADDR)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REMOTE_ADDR", a_ctx->m_src_addr);
+        _ADD_VAR(a_ctx->m_src_addr);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -497,7 +497,7 @@ GET_VAR(REQUEST_PROTOCOL)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_PROTOCOL", a_ctx->m_protocol);
+        _ADD_VAR(a_ctx->m_protocol);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -515,7 +515,7 @@ GET_VAR(REQUEST_LINE)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_LINE", a_ctx->m_line);
+        _ADD_VAR(a_ctx->m_line);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -533,7 +533,7 @@ GET_VAR(REQUEST_METHOD)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_METHOD", a_ctx->m_method);
+        _ADD_VAR(a_ctx->m_method);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -551,7 +551,7 @@ GET_VAR(REQUEST_URI_RAW)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_URI_RAW", a_ctx->m_url);
+        _ADD_VAR(a_ctx->m_url);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -569,7 +569,7 @@ GET_VAR(REQUEST_URI)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_URI", a_ctx->m_uri);
+        _ADD_VAR(a_ctx->m_uri);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -587,7 +587,7 @@ GET_VAR(REQUEST_FILENAME)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_FILENAME", a_ctx->m_path);
+        _ADD_VAR(a_ctx->m_path);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -604,7 +604,7 @@ GET_VAR(REQUEST_BASENAME)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("REQUEST_BASENAME", a_ctx->m_base);
+        _ADD_VAR(a_ctx->m_base);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -622,7 +622,7 @@ GET_VAR(QUERY_STRING)
         // -------------------------------------------------
         // unconditional match
         // -------------------------------------------------
-        _ADD_VAR("QUERY_STRING", a_ctx->m_query_str);
+        _ADD_VAR(a_ctx->m_query_str);
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
@@ -1067,7 +1067,7 @@ GET_VAR(TX)
         //NDBG_PRINT("a_var: %s\n", a_var.ShortDebugString().c_str());
         if(!a_var.match_size())
         {
-                NDBG_PRINT("no tx variable specified\n");
+                //NDBG_PRINT("no tx variable specified\n");
                 return WAFLZ_STATUS_OK;
         }
         for(int32_t i_m = 0; i_m < a_var.match_size(); ++i_m)
@@ -1233,6 +1233,47 @@ GET_VAR(REQUEST_BODY)
         return WAFLZ_STATUS_OK;
 }
 //: ----------------------------------------------------------------------------
+//: \details: REQBODY_ERROR
+//: \return:  TODO
+//: \param:   TODO
+//: ----------------------------------------------------------------------------
+GET_VAR(REQBODY_ERROR)
+{
+        if(!a_ctx)
+        {
+                return WAFLZ_STATUS_ERROR;
+        }
+        // -------------------------------------------------
+        // in map???
+        // -------------------------------------------------
+        cx_map_t::const_iterator i_tx = a_ctx->m_cx_tx_map.find("REQBODY_ERROR");
+        if(i_tx == a_ctx->m_cx_tx_map.end())
+        {
+                return WAFLZ_STATUS_OK;;
+        }
+        const std::string &l_key = i_tx->first;
+        const std::string &l_str = i_tx->second;
+        uint32_t l_len = sizeof("REQBODY_ERROR") - 1;
+        // -------------------------------------------------
+        // is count???
+        // -------------------------------------------------
+        if(a_var.is_count())
+        {
+                if(l_len > 0)
+                {
+                        ++ao_count;
+                }
+                return WAFLZ_STATUS_OK;
+        }
+        const_arg_t l_data;
+        l_data.m_key = l_key.c_str();
+        l_data.m_key_len = l_key.length();
+        l_data.m_val = l_str.c_str();
+        l_data.m_val_len = l_str.length();
+        ao_list.push_back(l_data);
+        return WAFLZ_STATUS_OK;
+}
+//: ----------------------------------------------------------------------------
 //: \details: XML
 //: \return:  TODO
 //: \param:   TODO
@@ -1259,6 +1300,24 @@ GET_VAR(XML)
                 ao_list.push_back(l_data);
                 ao_count = 1;
                 return WAFLZ_STATUS_OK;
+        }
+        // Check for negated xml variable
+        // We only support yanking out the whole xml and not any specific var
+        // e.g !xml:/*
+        for(int32_t i_m = 0; i_m < a_var.match_size(); ++i_m)
+        {
+                // -----------------------------------------
+                // check match
+                // -----------------------------------------
+                const ::waflz_pb::variable_t_match_t &l_match = a_var.match(i_m);
+                if(l_match.is_negated() &&
+                   l_match.has_value())
+                {
+                        if(l_match.value() == "/*")
+                        {
+                                return WAFLZ_STATUS_OK;
+                        }
+                }
         }
         // -------------------------------------------------
         // TODO -not xmlns meta is unhandled here...
@@ -1413,7 +1472,7 @@ void init_var_cb_vector(void)
         // -------------------------------------------------
         // req body parse failure message
         // -------------------------------------------------
-        //INIT_GET_VAR(REQBODY_ERROR);
+        INIT_GET_VAR(REQBODY_ERROR);
         // -------------------------------------------------
         // mutipart/form-data variables...
         // -------------------------------------------------

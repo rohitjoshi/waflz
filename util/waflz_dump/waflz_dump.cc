@@ -247,11 +247,12 @@ int main(int argc, char** argv)
                 print_usage(stdout, -1);
         }
         std::string l_ruleset_dir = ns_waflz::get_file_path(l_input_file);
+        l_ruleset_dir += "/";
         l_engine->set_ruleset_dir(l_ruleset_dir);
         l_status = l_waf->init(l_input_format, l_input_file);
         if(l_status != WAFLZ_STATUS_OK)
         {
-                printf("Error: performing init_with_file: %s\n", l_input_file.c_str());
+                printf("Error: performing init_with_file: %s reason %s\n", l_input_file.c_str(), l_waf->get_err_msg());
                 return WAFLZ_STATUS_ERROR;
         }
         //uint64_t l_start_time_ms = get_time_ms();

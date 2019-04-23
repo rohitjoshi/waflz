@@ -43,6 +43,7 @@ pushd build && \
     cmake ../ \
     -DBUILD_SYMBOLS=ON \
     -DBUILD_APPS=ON \
+    -DBUILD_UBUNTU=ON \
     -DCMAKE_INSTALL_PREFIX=/usr && \
     make -j$(nproc) && \
     make test && \

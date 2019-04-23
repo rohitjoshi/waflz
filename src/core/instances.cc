@@ -24,7 +24,6 @@
 //: Includes
 //: ----------------------------------------------------------------------------
 #include "config.pb.h"
-#include "event.pb.h"
 #include "waflz/instances.h"
 #include "waflz/instance.h"
 #include "waflz/profile.h"
@@ -154,8 +153,6 @@ int32_t instances::load_config(instance **ao_instance,
                 return WAFLZ_STATUS_ERROR;
         }
         const std::string& l_id = l_instance->get_id();
-        // TODO REMOVE
-        //NDBG_PRINT("l_id: %s\n", l_id.c_str());
         // -------------------------------------------------
         // check for exist in map
         // -------------------------------------------------
@@ -452,52 +449,19 @@ int32_t instances::load_config_dir(const char *a_dir_path,
 //: \return  TODO
 //: \param   TODO
 //: ----------------------------------------------------------------------------
-int32_t instances::process_audit(waflz_pb::event **ao_event,
-                                 void *a_ctx,
-                                 const std::string &a_id)
+int32_t instances::process(waflz_pb::event **ao_audit_event,
+                           waflz_pb::event **ao_prod_event,
+                           void *a_ctx,
+                           const std::string &a_id,
+                           rqst_ctx **ao_rqst_ctx)
 {
         if(m_enable_locking)
         {
-            pthread_mutex_lock(&m_mutex);
+                pthread_mutex_lock(&m_mutex);
         }
         ns_waflz::instance *l_instance = NULL;
         l_instance = get_instance(a_id);
         if(!l_instance)
-        {
-                if (m_enable_locking)
-                {
-                        pthread_mutex_unlock(&m_mutex);
-                }
-                return WAFLZ_STATUS_OK;
-        }
-        ns_waflz::profile *l_p_ptr = NULL;
-        l_p_ptr = l_instance->get_audit_profile();
-        // No audit profile for this instance
-        // Return ok
-        if(!l_p_ptr)
-        {
-                if (m_enable_locking)
-                {
-                        pthread_mutex_unlock(&m_mutex);
-                }
-                return WAFLZ_STATUS_OK;
-        }
-        int32_t l_s;
-        l_s = l_p_ptr->process(ao_event, a_ctx);
-        if(l_s != WAFLZ_STATUS_OK)
-        {
-                // TODO FIX!!! log error
-                if (m_enable_locking)
-                {
-                        pthread_mutex_unlock(&m_mutex);
-                }
-                return WAFLZ_STATUS_ERROR;
-        }
-        // -------------------------------------------------
-        // if no event...
-        // -------------------------------------------------
-        if(!ao_event ||
-           !(*ao_event))
         {
                 if(m_enable_locking)
                 {
@@ -505,24 +469,15 @@ int32_t instances::process_audit(waflz_pb::event **ao_event,
                 }
                 return WAFLZ_STATUS_OK;
         }
-        // -------------------------------------------------
-        // set waf config specifics for logging
-        // -------------------------------------------------
-        waflz_pb::event &l_event = **ao_event;
-        l_event.set_waf_instance_id(l_instance->get_id());
-        l_event.set_waf_instance_name(l_instance->get_name());
-        l_event.set_waf_profile_action(l_p_ptr->get_action());
-        waflz_pb::profile *l_p_pb = l_p_ptr->get_pb();
-        l_event.set_ruleset_id(l_p_pb->ruleset_id());
-        l_event.set_ruleset_version(l_p_pb->ruleset_version());
-
-        if(l_p_pb->general_settings().has_paranoia_level())
+        int32_t l_s;
+        l_s = l_instance->process(ao_audit_event, ao_prod_event, a_ctx, ao_rqst_ctx);
+        if(l_s != WAFLZ_STATUS_OK)
         {
-                l_event.set_paranoia_level(l_p_pb->general_settings().paranoia_level());
-        }
-        if (!l_p_ptr->get_resp_header_name().empty())
-        {
-                l_event.set_response_header_name(l_p_ptr->get_resp_header_name());
+                if(m_enable_locking)
+                {
+                        pthread_mutex_unlock(&m_mutex);
+                }
+                return WAFLZ_STATUS_ERROR;
         }
         if(m_enable_locking)
         {
@@ -535,17 +490,17 @@ int32_t instances::process_audit(waflz_pb::event **ao_event,
 //: \return  TODO
 //: \param   TODO
 //: ----------------------------------------------------------------------------
-int32_t instances::process_prod(waflz_pb::event **ao_event,
+int32_t instances::process_part(waflz_pb::event **ao_audit_event,
+                                waflz_pb::event **ao_prod_event,
                                 void *a_ctx,
-                                const std::string &a_id)
+                                const std::string &a_id,
+                                part_mk_t a_part_mk,
+                                rqst_ctx **ao_rqst_ctx)
 {
         if(m_enable_locking)
         {
-            pthread_mutex_lock(&m_mutex);
+                pthread_mutex_lock(&m_mutex);
         }
-        // -------------------------------------------------
-        // get instance
-        // -------------------------------------------------
         ns_waflz::instance *l_instance = NULL;
         l_instance = get_instance(a_id);
         if(!l_instance)
@@ -556,63 +511,15 @@ int32_t instances::process_prod(waflz_pb::event **ao_event,
                 }
                 return WAFLZ_STATUS_OK;
         }
-        ns_waflz::profile *l_p_ptr = NULL;
-        l_p_ptr = l_instance->get_prod_profile();
-        // -------------------------------------------------
-        // No prod profile for this instance
-        // Return ok
-        // -------------------------------------------------
-        if(!l_p_ptr)
-        {
-                if(m_enable_locking)
-                {
-                        pthread_mutex_unlock(&m_mutex);
-                }
-                return WAFLZ_STATUS_OK;
-        }
-        // -------------------------------------------------
-        // set waf config specifics for logging
-        // -------------------------------------------------
         int32_t l_s;
-        l_s = l_p_ptr->process(ao_event, a_ctx);
+        l_s = l_instance->process_part(ao_audit_event, ao_prod_event, a_ctx, a_part_mk, ao_rqst_ctx);
         if(l_s != WAFLZ_STATUS_OK)
         {
-                // TODO FIX!!! log error
                 if(m_enable_locking)
                 {
                         pthread_mutex_unlock(&m_mutex);
                 }
                 return WAFLZ_STATUS_ERROR;
-        }
-        // -------------------------------------------------
-        // if no event...
-        // -------------------------------------------------
-        if(!ao_event ||
-           !(*ao_event))
-        {
-                if(m_enable_locking)
-                {
-                        pthread_mutex_unlock(&m_mutex);
-                }
-                return WAFLZ_STATUS_OK;
-        }
-        // -------------------------------------------------
-        // set waf config specifics for logging
-        // -------------------------------------------------
-        waflz_pb::event &l_event = **ao_event;
-        l_event.set_waf_instance_id(l_instance->get_id());
-        l_event.set_waf_instance_name(l_instance->get_name());
-        l_event.set_waf_profile_action(l_p_ptr->get_action());
-        waflz_pb::profile *l_p_pb = l_p_ptr->get_pb();
-        l_event.set_ruleset_id(l_p_pb->ruleset_id());
-        l_event.set_ruleset_version(l_p_pb->ruleset_version());
-        if(l_p_pb->general_settings().has_paranoia_level())
-        {
-                l_event.set_paranoia_level(l_p_pb->general_settings().paranoia_level());
-        }
-        if (!l_p_ptr->get_resp_header_name().empty())
-        {
-                l_event.set_response_header_name(l_p_ptr->get_resp_header_name());
         }
         if(m_enable_locking)
         {

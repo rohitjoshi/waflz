@@ -1,51 +1,52 @@
-//: ----------------------------------------------------------------------------
-//: Copyright (C) 2015 Verizon.  All Rights Reserved.
-//: All Rights Reserved
+//! ----------------------------------------------------------------------------
+//! Copyright (C) 2015 Verizon.  All Rights Reserved.
+//! All Rights Reserved
 //:
-//: \file:    rqst_ctx.h
-//: \details: TODO
-//: \author:  Reed P. Morrison
-//: \date:    01/19/2018
+//! \file:    rqst_ctx.h
+//! \details: TODO
+//! \author:  Reed P. Morrison
+//! \date:    01/19/2018
 //:
-//:   Licensed under the Apache License, Version 2.0 (the "License");
-//:   you may not use this file except in compliance with the License.
-//:   You may obtain a copy of the License at
+//!   Licensed under the Apache License, Version 2.0 (the "License");
+//!   you may not use this file except in compliance with the License.
+//!   You may obtain a copy of the License at
 //:
-//:       http://www.apache.org/licenses/LICENSE-2.0
+//!       http://www.apache.org/licenses/LICENSE-2.0
 //:
-//:   Unless required by applicable law or agreed to in writing, software
-//:   distributed under the License is distributed on an "AS IS" BASIS,
-//:   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//:   See the License for the specific language governing permissions and
-//:   limitations under the License.
+//!   Unless required by applicable law or agreed to in writing, software
+//!   distributed under the License is distributed on an "AS IS" BASIS,
+//!   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//!   See the License for the specific language governing permissions and
+//!   limitations under the License.
 //:
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
 #ifndef _RQST_CTX_H
 #define _RQST_CTX_H
-//: ----------------------------------------------------------------------------
-//: includes
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! includes
+//! ----------------------------------------------------------------------------
 #include <waflz/def.h>
 #include <waflz/arg.h>
 #include <waflz/parser.h>
-#include <waflz/waf.h>
+#include <waflz/profile.h>
 #include <list>
 #include <map>
 #include <strings.h>
-//: ----------------------------------------------------------------------------
-//: fwd decl's -proto
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! fwd decl's -proto
+//! ----------------------------------------------------------------------------
 namespace waflz_pb {
 class update_target_t;
-};
+class event;
+}
 namespace ns_waflz {
-//: ----------------------------------------------------------------------------
-//: fwd decl's
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! fwd decl's
+//! ----------------------------------------------------------------------------
 class waf;
-//: ----------------------------------------------------------------------------
-//: types
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! types
+//! ----------------------------------------------------------------------------
 struct cx_case_i_comp
 {
         bool operator() (const std::string& lhs, const std::string& rhs) const
@@ -57,24 +58,20 @@ typedef std::map<std::string, std::string, cx_case_i_comp> cx_map_t;
 typedef std::map <std::string, uint32_t> count_map_t;
 typedef std::map <data_t, data_t, data_case_i_comp> data_map_t;
 typedef std::list<data_t> data_list_t;
-// ---------------------------------------------------------
-// *********************************************************
-// for ctl
-// *********************************************************
-// ---------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! ctl
+//! ----------------------------------------------------------------------------
 typedef std::set<std::string> str_nc_set_t;
 typedef std::list<const ::waflz_pb::update_target_t *> rtu_list_t;
 typedef std::map<std::string, rtu_list_t> set_map_t;
-// ---------------------------------------------------------
-// *********************************************************
-// xml optimization
-// *********************************************************
-// ---------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! xpath optimization
+//! ----------------------------------------------------------------------------
 typedef std::list <const_arg_t> xpath_arg_list_t;
 typedef std::map <std::string, xpath_arg_list_t> xpath_cache_map_t;
-//: ----------------------------------------------------------------------------
-//: rqst_ctx
-//: ----------------------------------------------------------------------------
+//! ----------------------------------------------------------------------------
+//! rqst_ctx
+//! ----------------------------------------------------------------------------
 class rqst_ctx
 {
 public:
@@ -111,15 +108,16 @@ public:
         // -------------------------------------------------
         // public methods
         // -------------------------------------------------
-        rqst_ctx(uint32_t a_body_len_max,
+        rqst_ctx(void *a_ctx,
+                 uint32_t a_body_len_max,
                  bool a_parse_json = false);
         ~rqst_ctx();
-        int32_t init_phase_0(void *a_ctx);
-        int32_t init_phase_1(void *a_ctx,
-                             const pcre_list_t &a_il_query,
-                             const pcre_list_t &a_il_header,
-                             const pcre_list_t &a_il_cookie);
-        int32_t init_phase_2(const ctype_parser_map_t &a_ctype_parser_map, void *a_ctx);
+        int32_t init_phase_1(const pcre_list_t *a_il_query = NULL,
+                             const pcre_list_t *a_il_header = NULL,
+                             const pcre_list_t *a_il_cookie = NULL);
+        int32_t init_phase_2(const ctype_parser_map_t &a_ctype_parser_map);
+        int32_t reset_phase_1();
+        int32_t append_rqst_info(waflz_pb::event &ao_event);
         void show(void);
         // -------------------------------------------------
         // public members
@@ -149,6 +147,9 @@ public:
         uint32_t m_content_length;
         bool m_parse_json;
         std::string m_cookie_mutated;
+        data_t m_req_uuid;
+        uint32_t m_resp_status;
+
         // -------------------------------------------------
         // body parser
         // -------------------------------------------------
@@ -169,13 +170,17 @@ public:
         // -------------------------------------------------
         // state
         // -------------------------------------------------
+        bool m_init_phase_1;
+        bool m_init_phase_2;
         bool m_intercepted;
+        bool m_wl;
+        bool m_wl_audit;
+        bool m_wl_prod;
         uint32_t m_skip;
         const char * m_skip_after;
+        waflz_pb::event *m_event;
         // -------------------------------------------------
-        // *************************************************
-        // xml optimization
-        // *************************************************
+        // xpath optimization
         // -------------------------------------------------
         xpath_cache_map_t *m_xpath_cache_map;
 private:
@@ -184,6 +189,10 @@ private:
         // -------------------------------------------------
         rqst_ctx(const rqst_ctx &);
         rqst_ctx& operator=(const rqst_ctx &);
+        // -------------------------------------------------
+        // private members
+        // -------------------------------------------------
+        void *m_ctx;
 };
 }
 #endif
